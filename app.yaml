@@ -11,8 +11,19 @@ automatic_scaling:
 env_variables:
   NODE_ENV: "production"
 
+entrypoint: node server.js
+
 handlers:
+  - url: /static
+    static_dir: build/static
+    secure: always
+
+  - url: /(.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))$
+    static_files: build/\1
+    upload: build/.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$
+    secure: always
+
   - url: /.*
+    script: auto
     secure: always
     redirect_http_response_code: 301
-    script: auto
