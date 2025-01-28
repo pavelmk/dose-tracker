@@ -1,0 +1,26 @@
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.nav-link {
+  padding: 8px 16px;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.nav-link.active {
+  background: var(--accent-color);
+  color: white;
+}

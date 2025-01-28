@@ -1,0 +1,406 @@
+/* Base theme variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #e8e8e8;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #dddddd;
+  --accent-color: #007bff;
+  --accent-hover: #0056b3;
+  --error-color: #dc3545;
+  --success-color: #28a745;
+  --input-bg: #ffffff;
+  --popup-bg: #ffffff;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --grid-line-color: #cccccc;
+  --axis-label-color: #666666;
+  --tick-label-color: #999999;
+  --chart-text-color: #333333;
+}
+
+/* Dark theme overrides */
+[data-theme='dark'] {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #2d2d2d;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --border-color: #404040;
+  --accent-color: #3d8bfd;
+  --accent-hover: #2b6cd4;
+  --error-color: #ff4d4d;
+  --success-color: #4caf50;
+  --input-bg: #2d2d2d;
+  --popup-bg: #1e1e1e;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --grid-line-color: #404040;
+  --axis-label-color: #b0b0b0;
+  --tick-label-color: #909090;
+  --chart-text-color: #e0e0e0;
+}
+
+/* Global styles */
+body {
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+header {
+  margin-bottom: 20px;
+}
+
+.header-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.forms-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background-color: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.graph-section {
+  padding: 20px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.graph-container {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.time-range-selector {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.time-inputs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.time-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-input label {
+  white-space: nowrap;
+}
+
+.time-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.slider-track {
+  background: var(--accent-color);
+}
+
+.range-input::-webkit-slider-thumb {
+  background: var(--accent-color);
+}
+
+.range-input::-moz-range-thumb {
+  background: var(--accent-color);
+}
+
+.drug-form, .dose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.drug-form div, .dose-form div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+input, select, textarea {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--accent-hover);
+}
+
+button:disabled {
+  background-color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.defined-drugs, .dose-history {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.defined-drugs ul, .dose-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.defined-drugs li, .dose-history li {
+  padding: 8px;
+  margin: 4px 0;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+}
+
+.drug-search {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: var(--text-primary);
+}
+
+.dropdown-item:hover {
+  background-color: var(--bg-secondary);
+}
+
+.quick-select {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  justify-content: center;
+}
+
+.custom-range {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.decay-graph {
+  background-color: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: relative;
+}
+
+.chart-container {
+  color: var(--chart-text-color);
+}
+
+.export-graph {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+}
+
+.data-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.import-button {
+  padding: 10px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.import-button:hover {
+  background-color: var(--accent-hover);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+.success-message {
+  color: var(--success-color);
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+/* Customize datetime-local input */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* Override "Today" with "Now" */
+::-webkit-datetime-edit-text,
+::-webkit-datetime-edit-year-field,
+::-webkit-datetime-edit-month-field,
+::-webkit-datetime-edit-day-field,
+::-webkit-datetime-edit-hour-field,
+::-webkit-datetime-edit-minute-field,
+::-webkit-datetime-edit-ampm-field {
+  color: inherit;
+}
+
+/* Dose History Styles */
+.dose-history-container {
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  background: var(--bg-primary);
+}
+
+.dose-history-container h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+.dose-history-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dose-history-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.dose-history-content {
+  flex: 1;
+}
+
+.dose-history-drug {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.dose-history-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.dose-history-delete {
+  opacity: 0;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--error-color);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: opacity 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.dose-history-item:hover .dose-history-delete {
+  opacity: 1;
+}
+
+.dose-history-delete:hover {
+  background: var(--error-color);
+}
+
+@media (min-width: 768px) {
+  .container {
+    flex-direction: row;
+  }
+
+  .forms-section {
+    flex: 1;
+  }
+
+  .graph-section {
+    flex: 2;
+  }
+}
