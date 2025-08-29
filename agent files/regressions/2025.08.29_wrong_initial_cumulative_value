@@ -1,0 +1,6 @@
+issue discovered: right now when I set an initial dose of 200mg, it shows up on the graph as:
+
+8/10/2025, 9:30:00 AM
+levothyroxine: 221.90 mg
+
+even though the previous timepoint (which didn't exist) was 0. it should be 200mg is there some kind of state unsafety happening? 
