@@ -13,8 +13,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { Drug, DoseEntry, DataPoint, PlottedDrug, TimeRange } from '../types';
-import { useTheme } from '../hooks/useTheme';
+import { Drug, DoseEntry, DataPoint, TimeRange } from '../types';
 
 ChartJS.register(
   TimeScale,
@@ -27,17 +26,16 @@ ChartJS.register(
 );
 
 interface DecayGraphProps {
-  plottedDrugs: Array<{
-    drug: Drug;
-    doses: DoseEntry[];
-  }>;
+  drugs: Drug[];
+  doseEntries: DoseEntry[];
   timeRange: TimeRange;
   isDarkMode: boolean;
   onDeleteDose: (doseId: string) => void;
 }
 
 const DecayGraph: React.FC<DecayGraphProps> = ({
-  plottedDrugs,
+  drugs,
+  doseEntries,
   timeRange,
   isDarkMode,
   onDeleteDose,
@@ -54,6 +52,25 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
 
   const textColor = isDarkMode ? '#e0e0e0' : '#333333';
   const gridColor = isDarkMode ? '#404040' : '#cccccc';
+
+  // Group doses by drug
+  const plottedDrugs = useMemo(() => {
+    const drugMap = new Map<string, { drug: Drug; doses: DoseEntry[] }>();
+    
+    drugs.forEach(drug => {
+      drugMap.set(drug.id, { drug, doses: [] });
+    });
+    
+    doseEntries.forEach(dose => {
+      const plotted = drugMap.get(dose.drugId);
+      if (plotted) {
+        plotted.doses.push(dose);
+      }
+    });
+    
+    return Array.from(drugMap.values())
+      .filter(plotted => plotted.doses.length > 0);
+  }, [drugs, doseEntries]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -87,63 +104,129 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
   const calculateDecayPoints = (drug: Drug, doses: DoseEntry[]): DataPoint[] => {
     if (doses.length === 0) return [];
 
-    const points: DataPoint[] = [];
     const startTime = timeRange.start.getTime();
     const endTime = timeRange.end.getTime();
-    const step = (endTime - startTime) / 100;
-
-    for (let time = startTime; time <= endTime; time += step) {
+    const totalDuration = endTime - startTime;
+    
+    // Adaptive sampling: more points for longer time ranges, minimum density based on half-life
+    const halfLifeMs = drug.halfLife * 60 * 60 * 1000;
+    const minPointsPerHalfLife = 10; // Ensure smooth decay curves
+    const basePoints = Math.max(200, totalDuration / halfLifeMs * minPointsPerHalfLife);
+    
+    // Cap the points to prevent performance issues, but ensure minimum quality
+    const maxPoints = 2000;
+    const numPoints = Math.min(maxPoints, Math.max(basePoints, 100));
+    
+    // Create sampling points that include all dose times plus regular intervals
+    const sampleTimes = new Set<number>();
+    
+    // Add dose administration times for accurate dose markers
+    doses.forEach(dose => {
+      const doseTime = dose.administrationTime.getTime();
+      if (doseTime >= startTime && doseTime <= endTime) {
+        sampleTimes.add(doseTime);
+        // Add points around dose times for better curve resolution
+        sampleTimes.add(Math.max(startTime, doseTime - halfLifeMs * 0.1));
+        sampleTimes.add(Math.min(endTime, doseTime + halfLifeMs * 0.1));
+      }
+    });
+    
+    // Add regular sampling points
+    const step = totalDuration / numPoints;
+    for (let i = 0; i <= numPoints; i++) {
+      sampleTimes.add(startTime + i * step);
+    }
+    
+    // Convert to sorted array
+    const sortedTimes = Array.from(sampleTimes).sort((a, b) => a - b);
+    
+    // Calculate concentrations at each sample time
+    const points: DataPoint[] = [];
+    for (const time of sortedTimes) {
       let concentration = 0;
       for (const dose of doses) {
         const timeSinceAdmin = time - dose.administrationTime.getTime();
         if (timeSinceAdmin >= 0) {
-          const halfLives = timeSinceAdmin / (drug.halfLife * 60 * 60 * 1000);
+          const halfLives = timeSinceAdmin / halfLifeMs;
           concentration += dose.initialDose * Math.pow(0.5, halfLives);
         }
       }
       points.push({ x: new Date(time), y: concentration });
     }
+    
     return points;
   };
 
-  const datasets = plottedDrugs.map(({ drug, doses }, index) => ({
-    label: drug.name,
-    data: calculateDecayPoints(drug, doses).map(point => ({
-      ...point,
-      doseId: doses.find(dose => 
-        dose.administrationTime.getTime() === (typeof point.x === 'number' ? point.x : new Date(point.x).getTime())
-      )?.id
-    })),
-    borderColor: drug.color,
-    backgroundColor: drug.color,
-    pointBackgroundColor: (context: any) => {
-      if (selectedPoint && 
-          selectedPoint.datasetIndex === index && 
-          selectedPoint.index === context.dataIndex) {
-        return isDarkMode ? '#ffffff' : '#000000';
+  const datasets = plottedDrugs.map(({ drug, doses }, index) => {
+    const decayPoints = calculateDecayPoints(drug, doses);
+    
+    // Create dose markers - actual points where doses were administered
+    const doseMarkers = doses
+      .filter(dose => {
+        const doseTime = dose.administrationTime.getTime();
+        return doseTime >= timeRange.start.getTime() && doseTime <= timeRange.end.getTime();
+      })
+      .map(dose => {
+        // Calculate the concentration at the exact dose time
+        let concentration = 0;
+        for (const d of doses) {
+          const timeSinceAdmin = dose.administrationTime.getTime() - d.administrationTime.getTime();
+          if (timeSinceAdmin >= 0) {
+            const halfLives = timeSinceAdmin / (drug.halfLife * 60 * 60 * 1000);
+            concentration += d.initialDose * Math.pow(0.5, halfLives);
+          }
+        }
+        return {
+          x: dose.administrationTime,
+          y: concentration,
+          doseId: dose.id,
+          isDosePoint: true
+        };
+      });
+
+    return [
+      // Main decay curve
+      {
+        label: drug.name,
+        data: decayPoints,
+        borderColor: drug.color,
+        backgroundColor: drug.color,
+        pointBackgroundColor: 'transparent',
+        pointBorderColor: 'transparent',
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+        tension: 0.1,
+      },
+      // Dose markers
+      {
+        label: `${drug.name} Doses`,
+        data: doseMarkers,
+        borderColor: 'transparent',
+        backgroundColor: drug.color,
+        pointBackgroundColor: (context: any) => {
+          if (selectedPoint && 
+              selectedPoint.datasetIndex === index * 2 + 1 && 
+              selectedPoint.index === context.dataIndex) {
+            return isDarkMode ? '#ffffff' : '#000000';
+          }
+          return drug.color;
+        },
+        pointBorderColor: isDarkMode ? '#ffffff' : '#000000',
+        pointBorderWidth: 2,
+        pointRadius: (context: any) => {
+          if (selectedPoint && 
+              selectedPoint.datasetIndex === index * 2 + 1 && 
+              selectedPoint.index === context.dataIndex) {
+            return 8;
+          }
+          return 6;
+        },
+        showLine: false,
+        pointHoverRadius: 8,
       }
-      return drug.color;
-    },
-    pointBorderColor: drug.color,
-    pointBorderWidth: (context: any) => {
-      if (selectedPoint && 
-          selectedPoint.datasetIndex === index && 
-          selectedPoint.index === context.dataIndex) {
-        return 2;
-      }
-      return 1;
-    },
-    pointRadius: (context: any) => {
-      if (selectedPoint && 
-          selectedPoint.datasetIndex === index && 
-          selectedPoint.index === context.dataIndex) {
-        return 5;
-      }
-      return 3;
-    },
-    fill: false,
-    tension: 0.1,
-  }));
+    ];
+  }).flat();
 
   const data: ChartData<'line', DataPoint[]> = {
     datasets
@@ -166,6 +249,10 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
           font: {
             size: 14,
           },
+          filter: (legendItem: any) => {
+            // Only show decay curves in legend (even dataset indices)
+            return legendItem.datasetIndex % 2 === 0;
+          },
         },
       },
     },
@@ -176,24 +263,22 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
         const container = containerRef.current;
         if (!chart || !container) return;
 
-        // Get the point element from Chart.js
-        const pointElement = chart.getDatasetMeta(element.datasetIndex).data[element.index];
-        
-        // Get the center position of the point
-        const centerPoint = pointElement.getProps(['x', 'y'], true);
+        // Only handle clicks on dose marker datasets (odd indices)
+        if (element.datasetIndex % 2 === 0) {
+          setSelectedPoint(null);
+          return;
+        }
 
-        console.log('Click coordinates:', {
-          centerX: centerPoint.x,
-          centerY: centerPoint.y,
-          element
-        });
+        const pointElement = chart.getDatasetMeta(element.datasetIndex).data[element.index];
+        const centerPoint = pointElement.getProps(['x', 'y'], true);
+        const dataPoint = datasets[element.datasetIndex].data[element.index];
 
         setSelectedPoint({
           datasetIndex: element.datasetIndex,
           index: element.index,
           x: centerPoint.x,
           y: centerPoint.y,
-          doseId: datasets[element.datasetIndex].data[element.index].doseId
+          doseId: dataPoint.doseId
         });
       } else {
         setSelectedPoint(null);
@@ -278,24 +363,9 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
     >
       {selectedPoint && (
         <>
-          {/* Debug marker for click position */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              transform: `translate(${selectedPoint.x}px, ${selectedPoint.y}px)`,
-              width: '4px',
-              height: '4px',
-              backgroundColor: 'red',
-              zIndex: 999,
-            }}
-          />
           <div 
             ref={(el) => {
               if (el) {
-                const tooltipHeight = el.offsetHeight;
-                const tooltipWidth = el.offsetWidth;
                 el.style.transform = `translate(calc(${selectedPoint.x}px - 50%), calc(${selectedPoint.y}px - 100% - 10px))`;
               }
             }}
@@ -325,7 +395,7 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
               gap: '8px'
             }}>
               <span>
-                {plottedDrugs[selectedPoint.datasetIndex].drug.name}: {datasets[selectedPoint.datasetIndex].data[selectedPoint.index].y.toFixed(2)} mg
+                {plottedDrugs[Math.floor(selectedPoint.datasetIndex / 2)].drug.name}: {datasets[selectedPoint.datasetIndex].data[selectedPoint.index].y.toFixed(2)} mg
               </span>
               <button 
                 onClick={() => selectedPoint.doseId && handleDeletePoint(selectedPoint.doseId)}

@@ -18,12 +18,8 @@ export interface DoseEntry {
 export interface DataPoint {
   x: Date;
   y: number;
-}
-
-// Combined type for plotting drug with its doses
-export interface PlottedDrug {
-  drug: Drug;
-  doses: DoseEntry[];
+  doseId?: string;
+  isDosePoint?: boolean;
 }
 
 // Application state for undo/redo

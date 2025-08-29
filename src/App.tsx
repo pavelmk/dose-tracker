@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import DrugDefinitionForm from './components/DrugDefinitionForm';
 import DoseForm from './components/DoseForm';
@@ -6,7 +6,7 @@ import DoseHistory from './components/DoseHistory';
 import DecayGraph from './components/DecayGraph';
 import TimeRangeSelector from './components/TimeRangeSelector';
 import DataControls from './components/DataControls';
-import { Drug, DoseEntry, PlottedDrug, TimeRange, AppState } from './types';
+import { Drug, DoseEntry, TimeRange, AppState } from './types';
 import { useUndoRedo } from './hooks/useUndoRedo';
 import { useTheme } from './hooks/useTheme';
 
@@ -47,10 +47,6 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const [selectedDrug, setSelectedDrug] = useState<Drug | null>(null);
 
-  const handleDrugSelect = (drug: Drug) => {
-    setSelectedDrug(drug);
-  };
-
   // Calculate default time range based on doses
   const calculateDefaultTimeRange = (doses: DoseEntry[]): TimeRange => {
     if (doses.length === 0) {
@@ -74,30 +70,12 @@ function App() {
     if (doseEntries.length > 0) {
       setTimeRange(calculateDefaultTimeRange(doseEntries));
     }
-  }, []); // Empty dependency array means this only runs once on mount
+  }, [doseEntries]); // Include doseEntries dependency
 
   // Save to localStorage whenever state changes
   useEffect(() => {
     localStorage.setItem('drugPlotterState', JSON.stringify(state));
   }, [state]);
-
-  const plottedDrugs = useMemo(() => {
-    const drugMap = new Map<string, PlottedDrug>();
-    
-    drugs.forEach(drug => {
-      drugMap.set(drug.id, { drug, doses: [] });
-    });
-    
-    doseEntries.forEach(dose => {
-      const plotted = drugMap.get(dose.drugId);
-      if (plotted) {
-        plotted.doses.push(dose);
-      }
-    });
-    
-    return Array.from(drugMap.values())
-      .filter(plotted => plotted.doses.length > 0);
-  }, [drugs, doseEntries]);
 
   const handleAddDrug = (drug: Drug) => {
     updateState({
@@ -206,7 +184,8 @@ function App() {
             doseEntries={doseEntries}
           />
           <DecayGraph 
-            plottedDrugs={plottedDrugs}
+            drugs={drugs}
+            doseEntries={doseEntries}
             timeRange={timeRange}
             isDarkMode={theme === 'dark'}
             onDeleteDose={handleDeleteDose}
