@@ -127,6 +127,23 @@ function App() {
     updateState(newState);
   };
 
+  const handleReset = () => {
+    // Clear all data and reset to initial state
+    const emptyState: AppState = {
+      drugs: [],
+      doseEntries: []
+    };
+    updateState(emptyState);
+    
+    // Reset time range to default
+    const end = new Date();
+    const start = new Date(end.getTime() - 24 * 3600000);
+    setTimeRange({ start, end });
+    
+    // Clear selected drug
+    setSelectedDrug(null);
+  };
+
   return (
     <div className="App" data-theme={theme}>
       <header>
@@ -137,7 +154,7 @@ function App() {
           </button>
           <button onClick={undo} disabled={!canUndo}>↩️ Undo</button>
           <button onClick={redo} disabled={!canRedo}>↪️ Redo</button>
-          <DataControls state={state} onImport={handleImport} />
+          <DataControls state={state} onImport={handleImport} onReset={handleReset} />
         </div>
       </header>
       <div className="container">

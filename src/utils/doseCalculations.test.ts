@@ -283,5 +283,36 @@ describe('Dose Calculations', () => {
       // This should be 200mg, NOT ~287.84mg (which would be the old cumulative)
       expect(concentrationAfterDeletion).not.toBeCloseTo(287.84, 2);
     });
+
+    it('should handle app reset scenario: empty state after reset', () => {
+      // Test the reset functionality - calculations should work with empty arrays
+      const drug: Drug = { 
+        id: 'test-drug', 
+        name: 'Test Drug', 
+        halfLife: 24, 
+        color: '#000' 
+      };
+      
+      // Simulate app reset - no doses
+      const emptyDoses: DoseEntry[] = [];
+      
+      // Any time point should return 0 concentration
+      const testTime = new Date('2025-08-10T12:00:00.000Z');
+      const result = calculateTotalConcentration(emptyDoses, drug, testTime.getTime());
+      
+      expect(result).toBe(0);
+      
+      // Test multiple time points
+      const timePoints = [
+        Date.now(),
+        Date.now() - 24 * 60 * 60 * 1000, // 24 hours ago
+        Date.now() + 24 * 60 * 60 * 1000   // 24 hours from now
+      ];
+      
+      timePoints.forEach(timePoint => {
+        const concentration = calculateTotalConcentration(emptyDoses, drug, timePoint);
+        expect(concentration).toBe(0);
+      });
+    });
   });
 }); 

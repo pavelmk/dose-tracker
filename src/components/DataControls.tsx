@@ -4,9 +4,10 @@ import { AppState } from '../types';
 interface DataControlsProps {
   state: AppState;
   onImport: (data: AppState) => void;
+  onReset: () => void;
 }
 
-const DataControls: React.FC<DataControlsProps> = ({ state, onImport }) => {
+const DataControls: React.FC<DataControlsProps> = ({ state, onImport, onReset }) => {
   const handleExport = () => {
     const dataStr = JSON.stringify(state, (key, value) => {
       // Convert Date objects to ISO strings
@@ -49,6 +50,23 @@ const DataControls: React.FC<DataControlsProps> = ({ state, onImport }) => {
     reader.readAsText(file);
   };
 
+  const handleReset = () => {
+    const hasData = state.drugs.length > 0 || state.doseEntries.length > 0;
+    
+    if (hasData) {
+      const confirmed = window.confirm(
+        'Are you sure you want to reset all data? This will permanently delete all drugs and dose entries. This action cannot be undone.'
+      );
+      
+      if (confirmed) {
+        onReset();
+      }
+    } else {
+      // No data to clear, but still call reset to ensure clean state
+      onReset();
+    }
+  };
+
   return (
     <div className="data-controls">
       <button onClick={handleExport}>Export Data</button>
@@ -61,6 +79,16 @@ const DataControls: React.FC<DataControlsProps> = ({ state, onImport }) => {
           style={{ display: 'none' }}
         />
       </label>
+      <button 
+        onClick={handleReset}
+        style={{ 
+          backgroundColor: '#ff4444', 
+          color: 'white',
+          marginLeft: '8px'
+        }}
+      >
+        Reset All Data
+      </button>
     </div>
   );
 };
