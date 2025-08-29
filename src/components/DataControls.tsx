@@ -69,9 +69,9 @@ const DataControls: React.FC<DataControlsProps> = ({ state, onImport, onReset })
 
   return (
     <div className="data-controls">
-      <button onClick={handleExport}>Export Data</button>
+      <button onClick={handleExport}>⬇️ Export Data</button>
       <label className="import-button">
-        Import Data
+        ⬆️ Import Data
         <input
           type="file"
           accept=".json"
@@ -87,7 +87,7 @@ const DataControls: React.FC<DataControlsProps> = ({ state, onImport, onReset })
           marginLeft: '8px'
         }}
       >
-        Reset All Data
+        🗑️ Reset All Data
       </button>
     </div>
   );
