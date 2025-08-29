@@ -172,7 +172,7 @@ const DoseForm: React.FC<DoseFormProps> = ({
           onChange={(e) => setInitialDose(e.target.value)}
           required
           min="0"
-          step="0.1"
+          step="0.00001"
         />
       </div>
       <div className="time-input">

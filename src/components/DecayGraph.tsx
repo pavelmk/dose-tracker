@@ -14,6 +14,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 import { Drug, DoseEntry, DataPoint, TimeRange } from '../types';
+import { calculateTotalConcentration } from '../utils/doseCalculations';
 
 ChartJS.register(
   TimeScale,
@@ -140,17 +141,10 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
     // Convert to sorted array
     const sortedTimes = Array.from(sampleTimes).sort((a, b) => a - b);
     
-    // Calculate concentrations at each sample time
+    // Calculate concentrations at each sample time using the utility function
     const points: DataPoint[] = [];
     for (const time of sortedTimes) {
-      let concentration = 0;
-      for (const dose of doses) {
-        const timeSinceAdmin = time - dose.administrationTime.getTime();
-        if (timeSinceAdmin >= 0) {
-          const halfLives = timeSinceAdmin / halfLifeMs;
-          concentration += dose.initialDose * Math.pow(0.5, halfLives);
-        }
-      }
+      const concentration = calculateTotalConcentration(doses, drug, time);
       points.push({ x: new Date(time), y: concentration });
     }
     
@@ -167,15 +161,8 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
         return doseTime >= timeRange.start.getTime() && doseTime <= timeRange.end.getTime();
       })
       .map(dose => {
-        // Calculate the concentration at the exact dose time
-        let concentration = 0;
-        for (const d of doses) {
-          const timeSinceAdmin = dose.administrationTime.getTime() - d.administrationTime.getTime();
-          if (timeSinceAdmin >= 0) {
-            const halfLives = timeSinceAdmin / (drug.halfLife * 60 * 60 * 1000);
-            concentration += d.initialDose * Math.pow(0.5, halfLives);
-          }
-        }
+        // Calculate the concentration at the exact dose time using utility function
+        const concentration = calculateTotalConcentration(doses, drug, dose.administrationTime.getTime());
         return {
           x: dose.administrationTime,
           y: concentration,
