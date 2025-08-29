@@ -420,6 +420,7 @@ const DecayGraph: React.FC<DecayGraphProps> = ({
           ref={chartRef}
           data={data} 
           options={options}
+          redraw={false}
         />
       </div>
     </div>
