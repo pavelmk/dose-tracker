@@ -15,7 +15,7 @@ const DataControls: React.FC<DataControlsProps> = ({ state, onImport, onReset })
         return value.toISOString();
       }
       return value;
-    });
+    }, 4); // Add 4-space indentation for pretty-printing
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
