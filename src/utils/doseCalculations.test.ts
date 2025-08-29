@@ -146,5 +146,142 @@ describe('Dose Calculations', () => {
       const result = calculateTotalConcentration([futureDose], drug, baseTime);
       expect(result).toBe(0);
     });
+
+    it('should return exact initial dose amount at administration time for single dose', () => {
+      const drug: Drug = { id: '1', name: 'Test', halfLife: 24, color: '#000' };
+      const adminTime = new Date('2024-01-01T12:00:00Z');
+      
+      const dose: DoseEntry = {
+        id: '1',
+        drugId: '1', 
+        initialDose: 200,
+        administrationTime: adminTime
+      };
+
+      // At the exact moment of administration, concentration should equal initial dose
+      const result = calculateTotalConcentration([dose], drug, adminTime.getTime());
+      expect(result).toBe(200);
+    });
+
+    it('should handle multiple doses correctly at administration times', () => {
+      const drug: Drug = { id: '1', name: 'Test', halfLife: 24, color: '#000' };
+      const baseTime = new Date('2024-01-01T12:00:00Z');
+      
+      const dose1: DoseEntry = {
+        id: '1',
+        drugId: '1',
+        initialDose: 200,
+        administrationTime: baseTime
+      };
+
+      const dose2: DoseEntry = {
+        id: '2',
+        drugId: '1',
+        initialDose: 100,
+        administrationTime: new Date(baseTime.getTime() + 12 * 60 * 60 * 1000) // 12 hours later
+      };
+
+      // At time of first dose: should be exactly 200mg
+      const result1 = calculateTotalConcentration([dose1, dose2], drug, baseTime.getTime());
+      expect(result1).toBe(200);
+
+      // At time of second dose: should be first dose decayed + new dose
+      const result2 = calculateTotalConcentration([dose1, dose2], drug, dose2.administrationTime.getTime());
+      const expectedFromDose1 = 200 * Math.pow(0.5, 0.5); // 0.5 half-lives = 12hrs/24hrs
+      const expectedTotal = expectedFromDose1 + 100;
+      expect(result2).toBeCloseTo(expectedTotal, 10);
+    });
+
+    it('should reproduce the regression: single 200mg dose shows as 221.90mg bug', () => {
+      // This test reproduces the exact scenario from the bug report
+      const drug: Drug = { 
+        id: 'levothyroxine-id', 
+        name: 'levothyroxine', 
+        halfLife: 24, 
+        color: '#000' 
+      };
+      
+      // Simulate the exact time mentioned in the bug report
+      const adminTime = new Date('2025-08-10T09:30:00.000Z');
+      
+      const dose: DoseEntry = {
+        id: 'dose-1',
+        drugId: 'levothyroxine-id',
+        initialDose: 200,
+        administrationTime: adminTime
+      };
+
+      // At the exact moment of administration, should be exactly 200mg, not 221.90mg
+      const result = calculateTotalConcentration([dose], drug, adminTime.getTime());
+      expect(result).toBe(200);
+      expect(result).not.toBeCloseTo(221.90, 2);
+    });
+
+    it('should correctly handle dose deletion scenario: stale calculation bug', () => {
+      // This test reproduces the user's scenario: had multiple doses, deleted earlier ones
+      const drug: Drug = { 
+        id: 'levothyroxine-id', 
+        name: 'levothyroxine', 
+        halfLife: 24, 
+        color: '#000' 
+      };
+      
+      const baseTime = new Date('2025-08-09T09:30:00.000Z');
+      
+      // Original scenario: multiple doses
+      const dose1: DoseEntry = {
+        id: 'dose-1',
+        drugId: 'levothyroxine-id',
+        initialDose: 100,
+        administrationTime: baseTime
+      };
+      
+      const dose2: DoseEntry = {
+        id: 'dose-2', 
+        drugId: 'levothyroxine-id',
+        initialDose: 50,
+        administrationTime: new Date(baseTime.getTime() + 6 * 60 * 60 * 1000) // 6 hours later
+      };
+      
+      const dose3: DoseEntry = {
+        id: 'dose-3',
+        drugId: 'levothyroxine-id', 
+        initialDose: 200,
+        administrationTime: new Date(baseTime.getTime() + 24 * 60 * 60 * 1000) // 24 hours later
+      };
+
+      const allDoses = [dose1, dose2, dose3];
+
+      // Test with all doses: dose3 should include contributions from dose1 and dose2
+      const concentrationWithAllDoses = calculateTotalConcentration(
+        allDoses, 
+        drug, 
+        dose3.administrationTime.getTime()
+      );
+      
+      // Expected: dose1 (100mg after 24h = 50mg) + dose2 (50mg after 18h ≈ 41.5mg) + dose3 (200mg) 
+      const expectedFromDose1 = 100 * Math.pow(0.5, 1); // 1 half-life = 50mg
+      const expectedFromDose2 = 50 * Math.pow(0.5, 18/24); // 0.75 half-lives ≈ 37.84mg
+      const expectedFromDose3 = 200; // just administered
+      const expectedTotal = expectedFromDose1 + expectedFromDose2 + expectedFromDose3;
+      
+      expect(concentrationWithAllDoses).toBeCloseTo(expectedTotal, 2);
+
+      // Now simulate deletion: remove dose1 and dose2 (earlier doses)
+      const dosesAfterDeletion = [dose3]; // Only dose3 remains
+
+      // Test after deletion: dose3 should now show exactly 200mg, not the cumulative amount
+      const concentrationAfterDeletion = calculateTotalConcentration(
+        dosesAfterDeletion,
+        drug,
+        dose3.administrationTime.getTime()
+      );
+      
+      expect(concentrationAfterDeletion).toBe(200);
+      expect(concentrationAfterDeletion).not.toBeCloseTo(concentrationWithAllDoses, 2);
+      
+      // This should be 200mg, NOT ~287.84mg (which would be the old cumulative)
+      expect(concentrationAfterDeletion).not.toBeCloseTo(287.84, 2);
+    });
   });
 }); 
